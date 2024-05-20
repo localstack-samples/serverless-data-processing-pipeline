@@ -115,17 +115,23 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	})
 
 	// Define the API Gateway
-	awsapigateway.NewRestApi(stack, jsii.String("Api"), &awsapigateway.RestApiProps{
+	api := awsapigateway.NewRestApi(stack, jsii.String("Api"), &awsapigateway.RestApiProps{
 		DefaultIntegration: awsapigateway.NewLambdaIntegration(lambdaUpstream, nil),
 	})
+	// Add Lambda function integration
+	api.Root().AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(lambdaUpstream, nil), nil)
 
 	// Connect the Lambda functions to the Kinesis Stream and DynamoDB Stream
 	stream.GrantRead(lambdaMidstream.Role())
 	table.GrantStreamRead(lambdaDownstream.Role())
 
 	// Add the event sources to the Lambda functions
-	lambdaUpstream.AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{}))
-	lambdaMidstream.AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{}))
+	lambdaUpstream.AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{
+		StartingPosition: awslambda.StartingPosition_LATEST,
+	}))
+	lambdaMidstream.AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{
+		StartingPosition: awslambda.StartingPosition_LATEST,
+	}))
 
 	return stack
 }
