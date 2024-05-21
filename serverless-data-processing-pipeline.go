@@ -30,25 +30,10 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	vpc := awsec2.NewVpc(stack, jsii.String("VPC"), &awsec2.VpcProps{})
 
 	// Create a Gateway VPC endpoint for DynamoDB
-	gateway := awsec2.NewGatewayVpcEndpoint(stack, jsii.String("DynamoDbEndpoint"), &awsec2.GatewayVpcEndpointProps{
+	awsec2.NewGatewayVpcEndpoint(stack, jsii.String("DynamoDbEndpoint"), &awsec2.GatewayVpcEndpointProps{
 		Vpc:     vpc,
 		Service: awsec2.GatewayVpcEndpointAwsService_DYNAMODB(),
 	})
-
-	// Add a route to the main route table that points to the DynamoDB Gateway Endpoint
-	publicSubnets := vpc.PublicSubnets()
-	if publicSubnets != nil {
-		if len(*publicSubnets) > 0 {
-			routeTable := (*publicSubnets)[0].RouteTable()
-
-			// Add a route to the main route table that points to the DynamoDB Gateway Endpoint
-			awsec2.NewCfnRoute(stack, jsii.String("DynamoDbRoute"), &awsec2.CfnRouteProps{
-				RouteTableId:         routeTable.RouteTableId(),
-				DestinationCidrBlock: jsii.String("0.0.0.0/0"),
-				GatewayId:            gateway.VpcEndpointId(),
-			})
-		}
-	}
 
 	// Create a VPC endpoint for Kinesis
 	awsec2.NewInterfaceVpcEndpoint(stack, jsii.String("KinesisEndpoint"), &awsec2.InterfaceVpcEndpointProps{
