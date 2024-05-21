@@ -78,14 +78,17 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			Code: awslambda.Code_FromAsset(jsii.String("lambda/"+k), &awss3assets.AssetOptions{
 				Bundling: &awscdk.BundlingOptions{
 					Image:   awscdk.DockerImage_FromRegistry(jsii.String("golang:1.21")),
-					Command: &[]*string{jsii.String("go"), jsii.String("build"), jsii.String("-o"), jsii.String("/asset-output/main"), jsii.String(".")},
+					Command: &[]*string{jsii.String("bash"), jsii.String("-c"), jsii.String("go build -o /asset-output/main .")},
 					Environment: &map[string]*string{
 						"GOCACHE": jsii.String("/tmp/go-cache"),
+						"GOOS":    jsii.String("linux"),
+						"GOARCH":  jsii.String("amd64"),
 					},
 				},
 			}),
-			Handler:     jsii.String("main"),
-			Environment: &v,
+			Handler:      jsii.String("main"),
+			Environment:  &v,
+			Architecture: awslambda.Architecture_X86_64(),
 		})
 		lambdas[k] = lambda
 	}
