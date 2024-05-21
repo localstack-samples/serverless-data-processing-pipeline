@@ -69,67 +69,53 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	})
 
 	// Define the Lambda functions
-	lambdaUpstream := awslambda.NewFunction(stack, jsii.String("LambdaUpstream"), &awslambda.FunctionProps{
-		Vpc:     vpc,
-		Runtime: awslambda.Runtime_GO_1_X(),
-		Code: awslambda.Code_FromAsset(jsii.String("lambda/upstream"), &awss3assets.AssetOptions{
-			Bundling: &awscdk.BundlingOptions{
-				Image:   awscdk.DockerImage_FromRegistry(jsii.String("public.ecr.aws/sam/build-go1.x")),
-				Command: &[]*string{jsii.String("go"), jsii.String("build"), jsii.String("-o"), jsii.String("/asset-output/main"), jsii.String(".")},
-			},
-		}),
-		Handler: jsii.String("main"),
-		Environment: &map[string]*string{
-			"LAMBDA_STAGE": jsii.String("upstream"),
-			"STREAM_NAME":  stream.StreamName(),
+	lambdaConfig := map[string]map[string]*string{
+		"upstream": {
+			"LAMBDA_STAGE:": jsii.String("upstream"),
+			"STREAM_NAME":   stream.StreamName(),
 		},
-	})
-	lambdaMidstream := awslambda.NewFunction(stack, jsii.String("LambdaMidstream"), &awslambda.FunctionProps{
-		Vpc:     vpc,
-		Runtime: awslambda.Runtime_GO_1_X(),
-		Code: awslambda.Code_FromAsset(jsii.String("lambda/midstream"), &awss3assets.AssetOptions{
-			Bundling: &awscdk.BundlingOptions{
-				Image:   awscdk.DockerImage_FromRegistry(jsii.String("public.ecr.aws/sam/build-go1.x")),
-				Command: &[]*string{jsii.String("go"), jsii.String("build"), jsii.String("-o"), jsii.String("/asset-output/main"), jsii.String(".")},
-			},
-		}),
-		Handler: jsii.String("main"),
-		Environment: &map[string]*string{
-			"LAMBDA_STAGE": jsii.String("midstream"),
-			"TABLE_NAME":   table.TableName(),
+		"midstream": {
+			"LAMBDA_STAGE:": jsii.String("midstream"),
+			"TABLE_NAME":    table.TableName(),
 		},
-	})
-	lambdaDownstream := awslambda.NewFunction(stack, jsii.String("LambdaDownstream"), &awslambda.FunctionProps{
-		Vpc:     vpc,
-		Runtime: awslambda.Runtime_GO_1_X(),
-		Code: awslambda.Code_FromAsset(jsii.String("lambda/downstream"), &awss3assets.AssetOptions{
-			Bundling: &awscdk.BundlingOptions{
-				Image:   awscdk.DockerImage_FromRegistry(jsii.String("public.ecr.aws/sam/build-go1.x")),
-				Command: &[]*string{jsii.String("go"), jsii.String("build"), jsii.String("-o"), jsii.String("/asset-output/main"), jsii.String(".")},
-			},
-		}),
-		Handler: jsii.String("main"),
-		Environment: &map[string]*string{
-			"LAMBDA_STAGE": jsii.String("downstream"),
+		"downstream": {
+			"LAMBDA_STAGE:": jsii.String("downstream"),
 		},
-	})
+	}
+
+	lambdas := make(map[string]awslambda.IFunction)
+	for k, v := range lambdaConfig {
+		lambda := awslambda.NewFunction(stack, jsii.String("Lambda"+k), &awslambda.FunctionProps{
+			Vpc:     vpc,
+			Runtime: awslambda.Runtime_GO_1_X(),
+			Code: awslambda.Code_FromAsset(jsii.String("lambda/"+k), &awss3assets.AssetOptions{
+				Bundling: &awscdk.BundlingOptions{
+					Image:   awscdk.DockerImage_FromRegistry(jsii.String("public.ecr.aws/sam/build-go1.x")),
+					Command: &[]*string{jsii.String("go"), jsii.String("build"), jsii.String("-o"), jsii.String("/asset-output/main"), jsii.String(".")},
+				},
+			}),
+			Handler:     jsii.String("main"),
+			Environment: &v,
+		})
+		lambdas[k] = lambda
+	}
 
 	// Define the API Gateway
 	api := awsapigateway.NewRestApi(stack, jsii.String("Api"), &awsapigateway.RestApiProps{
-		DefaultIntegration: awsapigateway.NewLambdaIntegration(lambdaUpstream, nil),
+		DefaultIntegration: awsapigateway.NewLambdaIntegration(lambdas["upstream"], nil),
 	})
 	// Add Lambda function integration
-	api.Root().AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(lambdaUpstream, nil), nil)
+	api.Root().AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(lambdas["upstream"], nil), nil)
 
 	// Connect the Lambda functions to the Kinesis Stream and DynamoDB Stream
-	stream.GrantRead(lambdaMidstream.Role())
-	table.GrantStreamRead(lambdaDownstream.Role())
+	stream.GrantRead(lambdas["midstream"].Role())
+	table.GrantStreamRead(lambdas["downstream"].Role())
 
 	// Add the event sources to the Lambda functions
-	lambdaUpstream.AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{
+	lambdas["upstream"].AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
 	}))
-	lambdaMidstream.AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{
+	lambdas["midstream"].AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
 	}))
 
