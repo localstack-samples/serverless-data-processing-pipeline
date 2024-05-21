@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
@@ -85,13 +87,16 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 
 	lambdas := make(map[string]awslambda.IFunction)
 	for k, v := range lambdaConfig {
-		lambda := awslambda.NewFunction(stack, jsii.String("Lambda"+k), &awslambda.FunctionProps{
+		lambda := awslambda.NewFunction(stack, jsii.String("Lambda"+strings.ToUpper(k)), &awslambda.FunctionProps{
 			Vpc:     vpc,
 			Runtime: awslambda.Runtime_GO_1_X(),
 			Code: awslambda.Code_FromAsset(jsii.String("lambda/"+k), &awss3assets.AssetOptions{
 				Bundling: &awscdk.BundlingOptions{
-					Image:   awscdk.DockerImage_FromRegistry(jsii.String("public.ecr.aws/sam/build-go1.x")),
+					Image:   awscdk.DockerImage_FromRegistry(jsii.String("golang:1.21")),
 					Command: &[]*string{jsii.String("go"), jsii.String("build"), jsii.String("-o"), jsii.String("/asset-output/main"), jsii.String(".")},
+					Environment: &map[string]*string{
+						"GOCACHE": jsii.String("/tmp/go-cache"),
+					},
 				},
 			}),
 			Handler:     jsii.String("main"),
