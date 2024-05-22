@@ -44,7 +44,10 @@ watch_and_build() {
         watchman-wait "lambda/src/$FUNC_NAME" -p '*.go'
 
         # Trigger a build after changes
-        sh -c "cd ./lambda/src/$FUNC_NAME && GOOS=linux GOARCH=amd64 go build -v -o ../../dist/$FUNC_NAME/main && echo 'compilation done'"
+        sh -c "cd ./lambda/src/$FUNC_NAME && GOOS=linux GOARCH=amd64 go build -a -v -o ../../dist/$FUNC_NAME/main && echo 'compilation done'"
+
+        # Add a sleep to allow for easy script exit
+        sleep 1
     done
 }
 

@@ -133,8 +133,8 @@ func main() {
 
 	app := awscdk.NewApp(nil)
 
-	// Get this script's absolute path
-	rootDirectory, err := filepath.Abs(os.Args[0])
+	// Get the current working directory
+	rootDirectory, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
