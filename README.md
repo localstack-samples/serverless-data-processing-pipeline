@@ -12,9 +12,20 @@ The following dependencies need to be available on your machine:
 
 1. [CDK CLI](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html).
 
-## Useful commands
+1. [Watchman](https://facebook.github.io/watchman/docs/install).
 
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk synth`       emits the synthesized CloudFormation template
- * `go test`         run unit tests
+## Commands
+
+ * `localstack start`                         start LocalStack with the Docker executor
+ * `cdk bootstrap`                            bootstrap cdk stack onto AWS/LocalStack
+ * `cdk deploy`                               deploy this stack to your default AWS account/region
+ * `cdk diff`                                 compare deployed stack with current state
+ * `cdk synth`                                emits the synthesized CloudFormation template
+ * `go test`                                  run unit tests
+ * `watchman [upstream|midstream|downstream]` watch and hot-reload lambda functions
+
+## Configuration
+
+* `HOT_DEPLOY`       set to `true` if the hot-reloading feature is to be enabled
+* `LAMBDA_DIST_PATH` directory where binaries for the hot-reloading feature are stored (optional)
+* `LAMBDA_SRC_PATH`  directory where the src of the lambda functions is found

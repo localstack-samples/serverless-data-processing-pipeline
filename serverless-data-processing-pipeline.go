@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -10,6 +12,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awskinesis"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3assets"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
@@ -17,6 +20,9 @@ import (
 
 type ServerlessDataProcessingPipelineStackProps struct {
 	awscdk.StackProps
+	HotDeploy       bool
+	LambdasSrcPath  string
+	LambdasDistPath string
 }
 
 func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id string, props *ServerlessDataProcessingPipelineStackProps) awscdk.Stack {
@@ -71,11 +77,13 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	}
 
 	lambdas := make(map[string]awslambda.IFunction)
+	lambdaBucket := awss3.Bucket_FromBucketName(stack, jsii.String("HotReloadingBucket"), jsii.String("hot-reload"))
 	for k, v := range lambdaConfig {
-		lambda := awslambda.NewFunction(stack, jsii.String("Lambda"+strings.ToUpper(k)), &awslambda.FunctionProps{
-			Vpc:     vpc,
-			Runtime: awslambda.Runtime_GO_1_X(),
-			Code: awslambda.Code_FromAsset(jsii.String("lambda/"+k), &awss3assets.AssetOptions{
+		var lambdaCode awslambda.Code
+		if props.HotDeploy {
+			lambdaCode = awslambda.Code_FromBucket(lambdaBucket, jsii.String(filepath.Join(props.LambdasDistPath, k)), nil)
+		} else {
+			lambdaCode = awslambda.Code_FromAsset(jsii.String(filepath.Join(props.LambdasSrcPath, k)), &awss3assets.AssetOptions{
 				Bundling: &awscdk.BundlingOptions{
 					Image:   awscdk.DockerImage_FromRegistry(jsii.String("golang:1.21")),
 					Command: &[]*string{jsii.String("bash"), jsii.String("-c"), jsii.String("go build -o /asset-output/main .")},
@@ -85,7 +93,12 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 						"GOARCH":  jsii.String("amd64"),
 					},
 				},
-			}),
+			})
+		}
+		lambda := awslambda.NewFunction(stack, jsii.String("Lambda"+strings.ToTitle(k)), &awslambda.FunctionProps{
+			Vpc:          vpc,
+			Runtime:      awslambda.Runtime_GO_1_X(),
+			Code:         lambdaCode,
 			Handler:      jsii.String("main"),
 			Environment:  &v,
 			Architecture: awslambda.Architecture_X86_64(),
@@ -120,11 +133,40 @@ func main() {
 
 	app := awscdk.NewApp(nil)
 
+	// Get this script absolute path
+	rootDirectory, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		panic(err)
+	}
+
 	NewServerlessDataProcessingPipelineStack(app, "ServerlessDataProcessingPipelineStack", &ServerlessDataProcessingPipelineStackProps{
-		awscdk.StackProps{
+		StackProps: awscdk.StackProps{
 			Env: env(),
 		},
+		HotDeploy: os.Getenv("HOT_DEPLOY") == "true",
+		LambdasDistPath: func() string {
+			lambdaDistPath := os.Getenv("LAMBDA_DIST_PATH")
+			if lambdaDistPath == "" {
+				lambdaDistPath = "lambda/dist"
+			}
+			lambdaDistPath = filepath.Join(rootDirectory, lambdaDistPath)
+			return lambdaDistPath
+		}(),
+		LambdasSrcPath: func() string {
+			lambdaSrcPath := os.Getenv("LAMBDA_SRC_PATH")
+			if lambdaSrcPath == "" {
+				lambdaSrcPath = "lambda/src"
+			}
+			lambdaSrcPath = filepath.Join(rootDirectory, lambdaSrcPath)
+			return lambdaSrcPath
+		}(),
 	})
+
+	// Get this script absolute path
+	// script, err := filepath.Abs(os.Args[0])
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	app.Synth(nil)
 }
