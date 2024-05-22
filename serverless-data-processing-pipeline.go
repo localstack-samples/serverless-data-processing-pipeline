@@ -133,7 +133,7 @@ func main() {
 
 	app := awscdk.NewApp(nil)
 
-	// Get this script absolute path
+	// Get this script's absolute path
 	rootDirectory, err := filepath.Abs(os.Args[0])
 	if err != nil {
 		panic(err)
@@ -161,12 +161,6 @@ func main() {
 			return lambdaSrcPath
 		}(),
 	})
-
-	// Get this script absolute path
-	// script, err := filepath.Abs(os.Args[0])
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	app.Synth(nil)
 }
