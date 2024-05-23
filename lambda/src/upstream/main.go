@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,9 +18,22 @@ type MyEvent struct {
 	Message string `json:"message"`
 }
 
-func HandleRequest(ctx context.Context, event MyEvent) (string, error) {
+func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	var event MyEvent
+	err := json.Unmarshal([]byte(request.Body), &event)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Body:       fmt.Sprintf("failed to unmarshal request body: %s", err),
+		}, err
+	}
+
+	fmt.Println("event: ", event.ID, event.Message)
+
 	// Create a new session
-	sess := session.Must(session.NewSession(nil))
+	sess := session.Must(session.NewSession(&aws.Config{
+		Endpoint: aws.String("http://localhost.localstack.cloud:4566"),
+	}))
 
 	// Create a Kinesis service client
 	svc := kinesis.New(sess)
@@ -26,7 +41,10 @@ func HandleRequest(ctx context.Context, event MyEvent) (string, error) {
 	// Convert the event to JSON
 	data, err := json.Marshal(event)
 	if err != nil {
-		return "", err
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       fmt.Sprintf("failed to marshal payload: %s", err),
+		}, err
 	}
 
 	// Put record to Kinesis Stream
@@ -35,12 +53,14 @@ func HandleRequest(ctx context.Context, event MyEvent) (string, error) {
 		StreamName:   aws.String(os.Getenv("STREAM_NAME")),
 		PartitionKey: aws.String(event.ID),
 	})
-
 	if err != nil {
-		return "", err
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       fmt.Sprintf("failed to put record to Kinesis Stream: %s", err),
+		}, err
 	}
 
-	return "Success", nil
+	return events.APIGatewayProxyResponse{StatusCode: 200}, nil
 }
 
 func main() {
