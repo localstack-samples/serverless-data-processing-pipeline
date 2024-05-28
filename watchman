@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Function to handle the argument
+handle_argument() {
+    case $1 in
+        upstream)
+            echo "Watching lambda for upstream..."
+            # Add your commands for "upstream" here
+            ;;
+        midstream)
+            echo "Watching lambda for midstream..."
+            # Add your commands for "midstream" here
+            ;;
+        downstream)
+            echo "Watching lambda for downstream..."
+            # Add your commands for "downstream" here
+            ;;
+        *)
+            echo "Invalid argument. Please provide one of the following arguments: upstream, midstream, downstream."
+            exit 1
+            ;;
+    esac
+}
+
+# Function to watch a directory and build the binary on every file change
+watch_and_build() {
+    # Function name
+    FUNC_NAME=$1
+
+    # Watchman configuration
+    WATCHMAN_CONFIG=".watchmanconfig"
+
+    # Create a Watchman configuration file if it doesn't exist
+    if [ ! -f "$WATCHMAN_CONFIG" ]; then
+        echo "{}" > "$WATCHMAN_CONFIG"
+    fi
+
+    # Build the binary once before starting the loop
+    GOOS=linux GOARCH=amd64 go build -C ./lambda/src/$FUNC_NAME -o ../../dist/$FUNC_NAME/main
+    
+    # Start watching the directory
+    watchman watch "lambda/src/$FUNC_NAME"
+
+    # Loop indefinitely
+    while true; do
+        # Wait for changes
+        watchman-wait "lambda/src/$FUNC_NAME" -p '*.go'
+
+        # Trigger a build after changes
+        sh -c "GOOS=linux GOARCH=amd64 go build -C ./lambda/src/$FUNC_NAME -o ../../dist/$FUNC_NAME/main && echo 'compilation done'"
+
+        # Add a sleep to allow for easy script exit
+        sleep 1
+    done
+}
+
+# Check if an argument was provided
+if [ $# -eq 0 ]; then
+    echo "No arguments provided. Please provide one of the following arguments: upstream, midstream, downstream."
+    exit 1
+fi
+
+# Handle the argument
+handle_argument $1
+
+# Watch the directory and build the binary on every file change
+watch_and_build $1
