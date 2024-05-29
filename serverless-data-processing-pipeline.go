@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,6 +21,7 @@ import (
 
 type ServerlessDataProcessingPipelineStackProps struct {
 	awscdk.StackProps
+	IsLocal         bool
 	HotDeploy       bool
 	LambdasSrcPath  string
 	LambdasDistPath string
@@ -58,7 +60,7 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			Name: jsii.String("id"),
 			Type: awsdynamodb.AttributeType_STRING,
 		},
-		Stream: awsdynamodb.StreamViewType_NEW_IMAGE,
+		Stream: awsdynamodb.StreamViewType_NEW_AND_OLD_IMAGES,
 	})
 
 	// Define the Lambda functions
@@ -91,16 +93,16 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			lambdaCode = awslambda.Code_FromAsset(jsii.String(filepath.Join(props.LambdasSrcPath, k)), &awss3assets.AssetOptions{
 				Bundling: &awscdk.BundlingOptions{
 					Image:       awscdk.DockerImage_FromRegistry(jsii.String("golang:1.21")),
-					Command:     &[]*string{jsii.String("bash"), jsii.String("-c"), jsii.String("go build -o /asset-output/main .")},
+					Command:     &[]*string{jsii.String("bash"), jsii.String("-c"), jsii.String("go build -o /asset-output/bootstrap .")},
 					Environment: &environment,
 				},
 			})
 		}
 		lambda := awslambda.NewFunction(stack, jsii.String("Lambda"+strings.ToTitle(k)), &awslambda.FunctionProps{
 			Vpc:          vpc,
-			Runtime:      awslambda.Runtime_GO_1_X(),
+			Runtime:      awslambda.Runtime_PROVIDED_AL2(),
 			Code:         lambdaCode,
-			Handler:      jsii.String("main"),
+			Handler:      jsii.String("bootstrap"),
 			Environment:  &v,
 			Architecture: awslambda.Architecture_X86_64(),
 		})
@@ -110,12 +112,15 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	// Define the API Gateway
 	api := awsapigateway.NewRestApi(stack, jsii.String("Api"), &awsapigateway.RestApiProps{
 		DefaultIntegration: awsapigateway.NewLambdaIntegration(lambdas["upstream"], nil),
+		Description:        jsii.String("API Gateway for Serverless Data Processing Pipeline"),
 	})
 	// Add Lambda function integration
-	api.Root().AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(lambdas["upstream"], nil), nil)
+	apiMethod := api.Root().AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(lambdas["upstream"], nil), nil)
 
 	// Connect the Lambda functions to the Kinesis Stream and DynamoDB Stream
+	stream.GrantWrite(lambdas["upstream"].Role())
 	stream.GrantRead(lambdas["midstream"].Role())
+	table.GrantWriteData(lambdas["midstream"].Role())
 	table.GrantStreamRead(lambdas["downstream"].Role())
 
 	// Add the event sources to the Lambda functions
@@ -125,6 +130,26 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	lambdas["downstream"].AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
 	}))
+
+	// Relevant Cfn Outputs
+	methodEndpoint := fmt.Sprintf("%s%s", *api.Url(), *apiMethod.PhysicalName())
+	awscdk.NewCfnOutput(stack, jsii.String("ApiGatewayMethodEndpoint"), &awscdk.CfnOutputProps{
+		Value: &methodEndpoint,
+	})
+	awscdk.NewCfnOutput(stack, jsii.String("KinesisStreamName"), &awscdk.CfnOutputProps{
+		Value: stream.StreamName(),
+	})
+	awscdk.NewCfnOutput(stack, jsii.String("DynamoDBTableName"), &awscdk.CfnOutputProps{
+		Value: table.TableName(),
+	})
+	// Whether this is deployed to LocalStack or on AWS
+	environment := "AWS"
+	if props.IsLocal {
+		environment = "LocalStack"
+	}
+	awscdk.NewCfnOutput(stack, jsii.String("Environment"), &awscdk.CfnOutputProps{
+		Value: jsii.String(environment),
+	})
 
 	return stack
 }
@@ -144,6 +169,7 @@ func main() {
 		StackProps: awscdk.StackProps{
 			Env: env(),
 		},
+		IsLocal:   os.Getenv("USE_LOCALSTACK") == "true",
 		HotDeploy: os.Getenv("HOT_DEPLOY") == "true",
 		LambdasDistPath: func() string {
 			lambdaDistPath := os.Getenv("LAMBDA_DIST_PATH")
