@@ -64,34 +64,35 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	// Define the Lambda functions
 	lambdaConfig := map[string]map[string]*string{
 		"upstream": {
-			"LAMBDA_STAGE:": jsii.String("upstream"),
-			"STREAM_NAME":   stream.StreamName(),
+			"LAMBDA_STAGE": jsii.String("upstream"),
+			"STREAM_NAME":  stream.StreamName(),
 		},
 		"midstream": {
-			"LAMBDA_STAGE:": jsii.String("midstream"),
-			"TABLE_NAME":    table.TableName(),
+			"LAMBDA_STAGE": jsii.String("midstream"),
+			"TABLE_NAME":   table.TableName(),
 		},
 		"downstream": {
-			"LAMBDA_STAGE:": jsii.String("downstream"),
+			"LAMBDA_STAGE": jsii.String("downstream"),
 		},
 	}
 
 	lambdas := make(map[string]awslambda.IFunction)
-	lambdaBucket := awss3.Bucket_FromBucketName(stack, jsii.String("HotReloadingBucket"), jsii.String("hot-reload"))
 	for k, v := range lambdaConfig {
 		var lambdaCode awslambda.Code
+		environment := map[string]*string{
+			"GOCACHE": jsii.String("/tmp/go-cache"),
+			"GOOS":    jsii.String("linux"),
+			"GOARCH":  jsii.String("amd64"),
+		}
 		if props.HotDeploy {
+			lambdaBucket := awss3.Bucket_FromBucketName(stack, jsii.String("HotReloadingBucket"), jsii.String("hot-reload"))
 			lambdaCode = awslambda.Code_FromBucket(lambdaBucket, jsii.String(filepath.Join(props.LambdasDistPath, k)), nil)
 		} else {
 			lambdaCode = awslambda.Code_FromAsset(jsii.String(filepath.Join(props.LambdasSrcPath, k)), &awss3assets.AssetOptions{
 				Bundling: &awscdk.BundlingOptions{
-					Image:   awscdk.DockerImage_FromRegistry(jsii.String("golang:1.21")),
-					Command: &[]*string{jsii.String("bash"), jsii.String("-c"), jsii.String("go build -o /asset-output/main .")},
-					Environment: &map[string]*string{
-						"GOCACHE": jsii.String("/tmp/go-cache"),
-						"GOOS":    jsii.String("linux"),
-						"GOARCH":  jsii.String("amd64"),
-					},
+					Image:       awscdk.DockerImage_FromRegistry(jsii.String("golang:1.21")),
+					Command:     &[]*string{jsii.String("bash"), jsii.String("-c"), jsii.String("go build -o /asset-output/main .")},
+					Environment: &environment,
 				},
 			})
 		}
@@ -118,10 +119,10 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	table.GrantStreamRead(lambdas["downstream"].Role())
 
 	// Add the event sources to the Lambda functions
-	lambdas["upstream"].AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{
+	lambdas["midstream"].AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
 	}))
-	lambdas["midstream"].AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{
+	lambdas["downstream"].AddEventSource(awslambdaeventsources.NewDynamoEventSource(table, &awslambdaeventsources.DynamoEventSourceProps{
 		StartingPosition: awslambda.StartingPosition_LATEST,
 	}))
 

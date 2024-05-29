@@ -18,6 +18,10 @@ type MyEvent struct {
 	Message string `json:"message"`
 }
 
+type MyResponse struct {
+	Message string `json:"message"`
+}
+
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var event MyEvent
 	err := json.Unmarshal([]byte(request.Body), &event)
@@ -25,6 +29,9 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Body:       fmt.Sprintf("failed to unmarshal request body: %s", err),
+			Headers: map[string]string{
+				"Content-Type": "text/plain",
+			},
 		}, err
 	}
 
@@ -44,6 +51,9 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
 			Body:       fmt.Sprintf("failed to marshal payload: %s", err),
+			Headers: map[string]string{
+				"Content-Type": "text/plain",
+			},
 		}, err
 	}
 
@@ -57,6 +67,9 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{
 			StatusCode: 200,
 			Body:       fmt.Sprintf("failed to put record to Kinesis Stream: %s", err),
+			Headers: map[string]string{
+				"Content-Type": "text/plain",
+			},
 		}, err
 	}
 
