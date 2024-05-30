@@ -77,6 +77,11 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			"LAMBDA_STAGE": jsii.String("downstream"),
 		},
 	}
+	if props.IsLocal {
+		lambdaConfig["upstream"]["AWS_ENDPOINT_URL"] = jsii.String("http://localhost.localstack.cloud:4566")
+		lambdaConfig["midstream"]["AWS_ENDPOINT_URL"] = jsii.String("http://localhost.localstack.cloud:4566")
+		lambdaConfig["downstream"]["AWS_ENDPOINT_URL"] = jsii.String("http://localhost.localstack.cloud:4566")
+	}
 
 	lambdas := make(map[string]awslambda.IFunction)
 	for k, v := range lambdaConfig {

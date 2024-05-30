@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -39,6 +40,9 @@ func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error 
 		if err != nil {
 			return err
 		}
+
+		// Print the event ID and message to the CloudWatch log
+		fmt.Printf("Processing event ID %s, message %s.\n", event.ID, event.Message)
 
 		// Convert the MyEvent object to a DynamoDB attribute value
 		av, err := dynamodbattribute.MarshalMap(Item{
