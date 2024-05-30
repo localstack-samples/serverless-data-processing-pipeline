@@ -30,3 +30,20 @@ The following dependencies need to be available on your machine:
 * `HOT_DEPLOY`       set to `true` if the hot-reloading feature is to be enabled
 * `LAMBDA_DIST_PATH` directory where binaries for the hot-reloading feature are stored (optional)
 * `LAMBDA_SRC_PATH`  directory where the src of the lambda functions is found
+
+## Deploy
+
+On LocalStack:
+
+```bash
+export USE_LOCALSTACK=true
+export HOT_DEPLOY=true
+cdklocal bootstrap
+cdklocal deploy --require-approval=never
+```
+
+On AWS:
+```
+cdk bootstrap --profile aws
+cdk deploy --require-approval=never --profile aws
+```

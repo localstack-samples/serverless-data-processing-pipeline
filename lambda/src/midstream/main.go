@@ -26,7 +26,13 @@ type Item struct {
 
 func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error {
 	// Create a new session
-	sess := session.Must(session.NewSession(nil))
+	var endpointUrl *string
+	if os.Getenv("AWS_ENDPOINT_URL") != "" {
+		endpointUrl = aws.String(os.Getenv("AWS_ENDPOINT_URL"))
+	}
+	sess := session.Must(session.NewSession(&aws.Config{
+		Endpoint: endpointUrl,
+	}))
 
 	// Create a DynamoDB service client
 	svc := dynamodb.New(sess)

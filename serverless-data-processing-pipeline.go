@@ -77,10 +77,12 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			"LAMBDA_STAGE": jsii.String("downstream"),
 		},
 	}
+	var hotReloadBucket awss3.IBucket
 	if props.IsLocal {
 		lambdaConfig["upstream"]["AWS_ENDPOINT_URL"] = jsii.String("http://localhost.localstack.cloud:4566")
 		lambdaConfig["midstream"]["AWS_ENDPOINT_URL"] = jsii.String("http://localhost.localstack.cloud:4566")
 		lambdaConfig["downstream"]["AWS_ENDPOINT_URL"] = jsii.String("http://localhost.localstack.cloud:4566")
+		hotReloadBucket = awss3.Bucket_FromBucketName(stack, jsii.String("HotReloadingBucket"), jsii.String("hot-reload"))
 	}
 
 	lambdas := make(map[string]awslambda.IFunction)
@@ -92,8 +94,7 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			"GOARCH":  jsii.String("amd64"),
 		}
 		if props.HotDeploy {
-			lambdaBucket := awss3.Bucket_FromBucketName(stack, jsii.String("HotReloadingBucket"), jsii.String("hot-reload"))
-			lambdaCode = awslambda.Code_FromBucket(lambdaBucket, jsii.String(filepath.Join(props.LambdasDistPath, k)), nil)
+			lambdaCode = awslambda.Code_FromBucket(hotReloadBucket, jsii.String(filepath.Join(props.LambdasDistPath, k)), nil)
 		} else {
 			lambdaCode = awslambda.Code_FromAsset(jsii.String(filepath.Join(props.LambdasSrcPath, k)), &awss3assets.AssetOptions{
 				Bundling: &awscdk.BundlingOptions{

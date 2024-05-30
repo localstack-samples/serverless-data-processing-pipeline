@@ -55,7 +55,13 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	fmt.Println("Received event: ", event.ID, event.Message)
 
 	// Create a new session
-	sess := session.Must(session.NewSession(nil))
+	var endpointUrl *string
+	if os.Getenv("AWS_ENDPOINT_URL") != "" {
+		endpointUrl = aws.String(os.Getenv("AWS_ENDPOINT_URL"))
+	}
+	sess := session.Must(session.NewSession(&aws.Config{
+		Endpoint: endpointUrl,
+	}))
 
 	// Create a Kinesis service client
 	svc := kinesis.New(sess)
