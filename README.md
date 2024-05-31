@@ -14,6 +14,8 @@ The following dependencies need to be available on your machine:
 
 1. [Watchman](https://facebook.github.io/watchman/docs/install).
 
+1. [jq](https://jqlang.github.io/jq/download/).
+
 ## Commands
 
  * `localstack start`                         start LocalStack with the Docker executor
@@ -90,7 +92,7 @@ Followed by a sample request:
 
 ```sh
 localstack@macintosh serverless-data-processing-pipeline % timestamp=$(awk 'BEGIN {srand(); print srand()}')
-localstack@macintosh serverless-data-processing-pipeline % curl -XPOST -H "Content-Type: application/json" $API_ENDPOINT -d '{"id": "1", "message": "Hello World", "timestamp": 1717275767}' -i
+localstack@macintosh serverless-data-processing-pipeline % curl -XPOST -H "Content-Type: application/json" $API_ENDPOINT -d "$(jq -n --arg ts "$timestamp" '{id: "1", message: "Hello World", timestamp: $ts | tonumber}')" -i
 HTTP/2 200 
 content-type: application/json
 content-length: 21
