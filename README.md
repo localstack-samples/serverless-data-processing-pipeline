@@ -47,3 +47,55 @@ On AWS:
 cdk bootstrap --profile aws
 cdk deploy --require-approval=never --profile aws
 ```
+
+## Sample Run
+
+After deploying the stack, retrieve the method's endpoint by inspecting the CfnOutput outputs like in the following example:
+
+```sh
+localstack@macintosh serverless-data-processing-pipeline % USE_LOCALSTACK=true HOT_DEPLOY=true cdklocal deploy --require-approval=never                                                   
+
+✨  Synthesis time: 3.72s
+
+ServerlessDataProcessingPipelineStack:  start: Building dd5711540f04e06aa955d7f4862fc04e8cdea464cb590dae91ed2976bb78098e:current_account-current_region
+ServerlessDataProcessingPipelineStack:  success: Built dd5711540f04e06aa955d7f4862fc04e8cdea464cb590dae91ed2976bb78098e:current_account-current_region
+ServerlessDataProcessingPipelineStack:  start: Building 4c4836f6c768f4500c058ac6a02f2090830a58eb1a0e58d59a5c7ffadf208861:current_account-current_region
+ServerlessDataProcessingPipelineStack:  success: Built 4c4836f6c768f4500c058ac6a02f2090830a58eb1a0e58d59a5c7ffadf208861:current_account-current_region
+ServerlessDataProcessingPipelineStack:  start: Publishing dd5711540f04e06aa955d7f4862fc04e8cdea464cb590dae91ed2976bb78098e:current_account-current_region
+ServerlessDataProcessingPipelineStack:  start: Publishing 4c4836f6c768f4500c058ac6a02f2090830a58eb1a0e58d59a5c7ffadf208861:current_account-current_region
+ServerlessDataProcessingPipelineStack:  success: Published 4c4836f6c768f4500c058ac6a02f2090830a58eb1a0e58d59a5c7ffadf208861:current_account-current_region
+ServerlessDataProcessingPipelineStack:  success: Published dd5711540f04e06aa955d7f4862fc04e8cdea464cb590dae91ed2976bb78098e:current_account-current_region
+ServerlessDataProcessingPipelineStack: deploying... [1/1]
+ServerlessDataProcessingPipelineStack: creating CloudFormation changeset...
+
+ ✅  ServerlessDataProcessingPipelineStack
+
+✨  Deployment time: 30.69s
+
+Outputs:
+ServerlessDataProcessingPipelineStack.ApiEndpoint4F160690 = https://tsyeuri986.execute-api.localhost.localstack.cloud:4566/prod/
+ServerlessDataProcessingPipelineStack.ApiGatewayMethodEndpoint = https://tsyeuri986.execute-api.localhost.localstack.cloud:4566/prod/
+ServerlessDataProcessingPipelineStack.DynamoDBTableName = ServerlessDataProcessingPipeline-DynamoDBTable59784FC0-072648f2
+ServerlessDataProcessingPipelineStack.Environment = LocalStack
+ServerlessDataProcessingPipelineStack.KinesisStreamName = KinesisStream
+Stack ARN:
+arn:aws:cloudformation:us-east-1:000000000000:stack/ServerlessDataProcessingPipelineStack/68a8d688
+
+✨  Total time: 34.4s
+
+localstack@macintosh serverless-data-processing-pipeline % export API_ENDPOINT="https://tsyeuri986.execute-api.localhost.localstack.cloud:4566/prod/"
+```
+
+Followed by a sample request:
+
+```sh
+localstack@macintosh serverless-data-processing-pipeline % timestamp=$(awk 'BEGIN {srand(); print srand()}')
+localstack@macintosh serverless-data-processing-pipeline % curl -XPOST -H "Content-Type: application/json" $API_ENDPOINT -d '{"id": "1", "message": "Hello World", "timestamp": 1717275767}' -i
+HTTP/2 200 
+content-type: application/json
+content-length: 21
+date: Fri, 31 May 2024 18:07:54 GMT
+server: hypercorn-h2
+
+{"message":"success"}
+```
