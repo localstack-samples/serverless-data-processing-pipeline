@@ -15,8 +15,9 @@ import (
 )
 
 type Item struct {
-	ID      string `json:"id"`
-	Message string `json:"message"`
+	ID        string `json:"id"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error {
@@ -43,7 +44,7 @@ func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error 
 		}
 
 		// Print the event ID and message to the CloudWatch log
-		fmt.Printf("Processing event ID %s, message %s.\n", item.ID, item.Message)
+		fmt.Printf("Processing item ID %s, message %s.\n", item.ID, item.Message)
 
 		// Convert the MyEvent object to a DynamoDB attribute value
 		av, err := dynamodbattribute.MarshalMap(item)

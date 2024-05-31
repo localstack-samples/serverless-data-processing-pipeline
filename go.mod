@@ -1,4 +1,4 @@
-module serverless-data-processing-pipeline
+module github.com/localstack-samples/serverless-data-processing-pipeline
 
 go 1.18
 
