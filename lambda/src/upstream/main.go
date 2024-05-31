@@ -18,21 +18,49 @@ type MyEvent struct {
 	Message string `json:"message"`
 }
 
+type MyResponse struct {
+	Message string `json:"message"`
+}
+
+func restResponse(status int, message string) (events.APIGatewayProxyResponse, error) {
+	myResponse := MyResponse{
+		Message: message,
+	}
+	body, err := json.Marshal(myResponse)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       fmt.Sprintf("failed to marshal response body: %s", err),
+			Headers: map[string]string{
+				"Content-Type": "text/plain",
+			},
+		}, err
+	}
+	return events.APIGatewayProxyResponse{
+		StatusCode: status,
+		Body:       string(body),
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+	}, nil
+}
+
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var event MyEvent
 	err := json.Unmarshal([]byte(request.Body), &event)
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       fmt.Sprintf("failed to unmarshal request body: %s", err),
-		}, err
+		return restResponse(400, fmt.Sprintf("failed to unmarshal request body: %s", err))
 	}
 
-	fmt.Println("event: ", event.ID, event.Message)
+	fmt.Println("Received event: ", event.ID, event.Message)
 
 	// Create a new session
+	var endpointUrl *string
+	if os.Getenv("AWS_ENDPOINT_URL") != "" {
+		endpointUrl = aws.String(os.Getenv("AWS_ENDPOINT_URL"))
+	}
 	sess := session.Must(session.NewSession(&aws.Config{
-		Endpoint: aws.String("http://localhost.localstack.cloud:4566"),
+		Endpoint: endpointUrl,
 	}))
 
 	// Create a Kinesis service client
@@ -41,10 +69,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	// Convert the event to JSON
 	data, err := json.Marshal(event)
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Body:       fmt.Sprintf("failed to marshal payload: %s", err),
-		}, err
+		return restResponse(500, fmt.Sprintf("failed to marshal payload: %s", err))
 	}
 
 	// Put record to Kinesis Stream
@@ -54,13 +79,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		PartitionKey: aws.String(event.ID),
 	})
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Body:       fmt.Sprintf("failed to put record to Kinesis Stream: %s", err),
-		}, err
+		return restResponse(500, fmt.Sprintf("failed to put record to %s Kinesis Stream: %s", os.Getenv("STREAM_NAME"), err))
 	}
 
-	return events.APIGatewayProxyResponse{StatusCode: 200}, nil
+	return restResponse(200, "success")
 }
 
 func main() {

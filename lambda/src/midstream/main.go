@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -25,7 +26,13 @@ type Item struct {
 
 func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error {
 	// Create a new session
-	sess := session.Must(session.NewSession(nil))
+	var endpointUrl *string
+	if os.Getenv("AWS_ENDPOINT_URL") != "" {
+		endpointUrl = aws.String(os.Getenv("AWS_ENDPOINT_URL"))
+	}
+	sess := session.Must(session.NewSession(&aws.Config{
+		Endpoint: endpointUrl,
+	}))
 
 	// Create a DynamoDB service client
 	svc := dynamodb.New(sess)
@@ -39,6 +46,9 @@ func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error 
 		if err != nil {
 			return err
 		}
+
+		// Print the event ID and message to the CloudWatch log
+		fmt.Printf("Processing event ID %s, message %s.\n", event.ID, event.Message)
 
 		// Convert the MyEvent object to a DynamoDB attribute value
 		av, err := dynamodbattribute.MarshalMap(Item{
