@@ -16,6 +16,8 @@ The following dependencies need to be available on your machine:
 
 1. [jq](https://jqlang.github.io/jq/download/).
 
+1. [k6](https://k6.io/docs/get-started/installation/).
+
 ## Commands
 
  * `localstack start`                         start LocalStack with the Docker executor
@@ -100,4 +102,59 @@ date: Fri, 31 May 2024 18:07:54 GMT
 server: hypercorn-h2
 
 {"message":"success"}
+```
+
+## Stress Test
+
+```sh
+$ k6 run -e API_ENDPOINT=$API_ENDPOINT loadtest.js
+
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+     execution: local
+        script: loadtest.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 10 max VUs, 1m30s max duration (incl. graceful stop):
+              * default: 10 looping VUs for 1m0s (gracefulStop: 30s)
+
+
+     ✓ status was 200
+     ✓ transaction time OK
+
+     checks.........................: 100.00% ✓ 3432      ✗ 0   
+     data_received..................: 272 kB  4.5 kB/s
+     data_sent......................: 235 kB  3.9 kB/s
+     http_req_blocked...............: avg=484.25µs min=0s       med=1µs      max=87.94ms  p(90)=1µs      p(95)=1µs     
+     http_req_connecting............: avg=4.97µs   min=0s       med=0s       max=940µs    p(90)=0s       p(95)=0s      
+     http_req_duration..............: avg=350.92ms min=203.55ms med=339.86ms max=725.44ms p(90)=406.8ms  p(95)=488.96ms
+       { expected_response:true }...: avg=350.92ms min=203.55ms med=339.86ms max=725.44ms p(90)=406.8ms  p(95)=488.96ms
+     http_req_failed................: 0.00%   ✓ 0         ✗ 1716
+     http_req_receiving.............: avg=41.04ms  min=31.15ms  med=40.83ms  max=55.17ms  p(90)=42.03ms  p(95)=42.94ms 
+     http_req_sending...............: avg=64.99µs  min=12µs     med=42µs     max=2.06ms   p(90)=114.5µs  p(95)=150µs   
+     http_req_tls_handshaking.......: avg=213.15µs min=0s       med=0s       max=41.6ms   p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=309.81ms min=162.9ms  med=298.6ms  max=689.61ms p(90)=366.07ms p(95)=441.45ms
+     http_reqs......................: 1716    28.289592/s
+     iteration_duration.............: avg=351.62ms min=225.77ms med=340.5ms  max=725.59ms p(90)=406.92ms p(95)=489.08ms
+     iterations.....................: 1716    28.289592/s
+     vus............................: 10      min=10      max=10
+     vus_max........................: 10      min=10      max=10
+
+
+running (1m00.7s), 00/10 VUs, 1716 complete and 0 interrupted iterations
+default ✓ [======================================] 10 VUs  1m0s
+```
+
+And then let's wait until all requests have been processed by the `midstream` and `downstream` Lambda functions. Let's also save the timestamps that indicate how much time it took each request to flow through the entire pipeline.
+
+```sh
+$ ./wait_requests timestamps.json
+Monitoring CloudWatch metrics for new datapoints...
+No new datapoints added. Exiting.
+Exporting CloudWatch metrics to timestamps.json...
 ```

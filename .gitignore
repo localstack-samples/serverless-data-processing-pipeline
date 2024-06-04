@@ -18,3 +18,4 @@
 .cdk.staging
 cdk.out
 lambda/dist
+timestamps.json

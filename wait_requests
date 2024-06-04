@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e # Exit immediately if a command exits with a non-zero status
+
+# Check if the output file parameter is specified
+if [ -z "$1" ]; then
+    echo "Error: No JSON output file specified."
+    echo "Usage: $0 <output_file>"
+    exit 1
+fi
+
+# Get the output file from the first script argument
+output_file=$1
+
+echo "Monitoring CloudWatch metrics for new datapoints..."
+
+# Initial run to get the current number of datapoints
+current_datapoints=$(aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time 2022-01-01T00:00:00 --end-time 2025-01-02T00:00:00 --period 1 --statistics SampleCount | jq '[.Datapoints[].SampleCount] | add')
+
+while true; do
+    sleep 5  # Wait for 5 seconds
+
+    # Get the number of datapoints again
+    new_datapoints=$(aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time 2022-01-01T00:00:00 --end-time 2025-01-02T00:00:00 --period 1 --statistics SampleCount | jq '[.Datapoints[].SampleCount] | add')
+
+    # If the number of datapoints hasn't changed, break the loop
+    if [ "$new_datapoints" -eq "$current_datapoints" ]; then
+        echo "No new datapoints added. Exiting."
+        break
+    fi
+
+    # Update the current number of datapoints
+    current_datapoints=$new_datapoints
+
+done
+
+# Export the datapoints to the output file in JSON format
+echo "Exporting CloudWatch metrics to $output_file..."
+aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time 2020-01-01T00:00:00 --end-time 2030-01-02T00:00:00 --period 1 --statistics Average | jq '[.Datapoints[].Average]' > "$output_file"
