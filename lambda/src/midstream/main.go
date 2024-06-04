@@ -14,14 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
-type MyEvent struct {
-	ID      string `json:"id"`
-	Message string `json:"message"`
-}
-
 type Item struct {
-	ID      string `json:"id"`
-	Message string `json:"message"`
+	ID        string `json:"id"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error {
@@ -41,20 +37,17 @@ func HandleRequest(ctx context.Context, kinesisEvent events.KinesisEvent) error 
 		kinesisRecord := record.Kinesis
 
 		// Decode the data from the Kinesis record into a MyEvent object
-		var event MyEvent
-		err := json.Unmarshal(kinesisRecord.Data, &event)
+		var item Item
+		err := json.Unmarshal(kinesisRecord.Data, &item)
 		if err != nil {
 			return err
 		}
 
 		// Print the event ID and message to the CloudWatch log
-		fmt.Printf("Processing event ID %s, message %s.\n", event.ID, event.Message)
+		fmt.Printf("Processing item ID %s, message %s.\n", item.ID, item.Message)
 
 		// Convert the MyEvent object to a DynamoDB attribute value
-		av, err := dynamodbattribute.MarshalMap(Item{
-			ID:      event.ID,
-			Message: event.Message,
-		})
+		av, err := dynamodbattribute.MarshalMap(item)
 		if err != nil {
 			return err
 		}

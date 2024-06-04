@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsec2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awskinesis"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
@@ -128,6 +129,16 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 	stream.GrantRead(lambdas["midstream"].Role())
 	table.GrantWriteData(lambdas["midstream"].Role())
 	table.GrantStreamRead(lambdas["downstream"].Role())
+
+	// Allow downstream Lambda to push metrics to CloudWatch
+	lambdas["downstream"].Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
+		Actions: &[]*string{
+			jsii.String("cloudwatch:PutMetricData"),
+		},
+		Resources: &[]*string{
+			jsii.String("*"),
+		},
+	}))
 
 	// Add the event sources to the Lambda functions
 	lambdas["midstream"].AddEventSource(awslambdaeventsources.NewKinesisEventSource(stream, &awslambdaeventsources.KinesisEventSourceProps{
