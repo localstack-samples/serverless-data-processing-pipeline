@@ -59,6 +59,8 @@ func restResponse(status int, message string) (events.APIGatewayProxyResponse, e
 			},
 		}, err
 	}
+
+	fmt.Println(message)
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       string(body),
