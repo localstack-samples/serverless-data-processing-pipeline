@@ -9,6 +9,12 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+# Check if AWS profile is set
+if [ -z "$AWS_PROFILE" ]; then
+    echo "Error: AWS_PROFILE environment variable is not set."
+    exit 1
+fi
+
 # Get the output file from the first script argument
 output_file=$1
 
