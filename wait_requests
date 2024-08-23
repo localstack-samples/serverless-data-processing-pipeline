@@ -14,14 +14,25 @@ output_file=$1
 
 echo "Monitoring CloudWatch metrics for new datapoints..."
 
+# Check if localstack-main container is running
+if [ -z "$(docker ps -q -f name=localstack-main)" ]; then
+    echo "Error: LocalStack container is not running."
+    exit 1
+fi
+
+# Get the start time of the localstack container
+start_time=$(docker inspect -f '{{.State.StartedAt}}' localstack-main | sed 's/\.[0-9]*Z//' | xargs -I{} date -u -j -f '%Y-%m-%dT%H:%M:%S' {} +'%Y-%m-%dT%H:%M:%S')
+end_time=$(date -u +'%Y-%m-%dT%H:%M:%S')
+
 # Initial run to get the current number of datapoints
-current_datapoints=$(aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time 2022-01-01T00:00:00 --end-time 2025-01-02T00:00:00 --period 1 --statistics SampleCount | jq '[.Datapoints[].SampleCount] | add')
+current_datapoints=$(aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time $start_time --end-time $end_time --period 1 --statistics SampleCount | jq '[.Datapoints[].SampleCount] | add')
 
 while true; do
     sleep 5  # Wait for 5 seconds
+    end_time=$(date -u +'%Y-%m-%dT%H:%M:%S')
 
     # Get the number of datapoints again
-    new_datapoints=$(aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time 2022-01-01T00:00:00 --end-time 2025-01-02T00:00:00 --period 1 --statistics SampleCount | jq '[.Datapoints[].SampleCount] | add')
+    new_datapoints=$(aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time $start_time --end-time $end_time --period 1 --statistics SampleCount | jq '[.Datapoints[].SampleCount] | add')
 
     # If the number of datapoints hasn't changed, break the loop
     if [ "$new_datapoints" -eq "$current_datapoints" ]; then
@@ -36,4 +47,4 @@ done
 
 # Export the datapoints to the output file in JSON format
 echo "Exporting CloudWatch metrics to $output_file..."
-aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time 2020-01-01T00:00:00 --end-time 2030-01-02T00:00:00 --period 1 --statistics Average | jq '[.Datapoints[].Average]' > "$output_file"
+aws cloudwatch get-metric-statistics --namespace ServerlessDataProcessingPipeline/Latencies --metric-name Latency --start-time $start_time --end-time $end_time --period 1 --statistics Average | jq '[.Datapoints[].Average]' > "$output_file"

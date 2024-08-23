@@ -1,10 +1,10 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-// Get the API_ENDPOINT environment variable.
-const API_ENDPOINT = __ENV.API_ENDPOINT;
-if (!API_ENDPOINT) {
-    throw new Error("Please set the API_ENDPOINT environment variable");
+// Get the APIGW_ENDPOINT environment variable.
+const APIGW_ENDPOINT = __ENV.APIGW_ENDPOINT;
+if (!APIGW_ENDPOINT) {
+    throw new Error("Please set the APIGW_ENDPOINT environment variable");
 }
 
 export let options = {
@@ -28,7 +28,7 @@ export default function () {
 
     // Send a POST request to the server.
     let response = http.post(
-        API_ENDPOINT,
+        APIGW_ENDPOINT,
         body,
         { headers: { 'Content-Type': 'application/json' } },
     );
