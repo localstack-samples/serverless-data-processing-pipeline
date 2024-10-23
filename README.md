@@ -20,14 +20,14 @@ The following dependencies need to be available on your machine:
 
 ## Commands
 
- * `localstack start`                         start LocalStack with the Docker executor
- * `cdk bootstrap`                            bootstrap cdk stack onto AWS/LocalStack
- * `cdk deploy`                               deploy this stack to your default AWS account/region
- * `cdk diff`                                 compare deployed stack with current state
- * `cdk synth`                                emits the synthesized CloudFormation template
- * `go test`                                  run unit tests
- * `watchman [upstream|midstream|downstream]` watch and hot-reload lambda functions
- * `wait_requests <latencies_file.json>`      wait until all requests are processed and export the latencies
+ * `localstack start` start LocalStack with the Docker executor
+ * `cdk bootstrap`                                    bootstrap cdk stack onto AWS/LocalStack
+ * `cdk deploy`                                       deploy this stack to your default AWS account/region
+ * `cdk diff`                                         compare deployed stack with current state
+ * `cdk synth`                                        emits the synthesized CloudFormation template
+ * `go test`                                          run unit tests
+ * `watchman [upstream|midstream|downstream]`         watch and hot-reload lambda functions
+ * `wait_requests <latencies_file.json>`              wait until all requests are processed and export the latencies
 
 ## Configuration
 
@@ -41,6 +41,10 @@ The following dependencies need to be available on your machine:
 On LocalStack:
 
 ```bash
+export PROVIDER_OVERRIDE_CLOUDWATCH=v1
+export LAMBDA_EVENT_SOURCE_MAPPING=v2
+localstack start -d
+
 export USE_LOCALSTACK=true
 export HOT_DEPLOY=true
 cdklocal bootstrap
@@ -88,14 +92,14 @@ arn:aws:cloudformation:us-east-1:000000000000:stack/ServerlessDataProcessingPipe
 
 ✨  Total time: 34.4s
 
-localstack@macintosh serverless-data-processing-pipeline % export API_ENDPOINT="https://tsyeuri986.execute-api.localhost.localstack.cloud:4566/prod/"
+localstack@macintosh serverless-data-processing-pipeline % export APIGW_ENDPOINT="https://tsyeuri986.execute-api.localhost.localstack.cloud:4566/prod/"
 ```
 
 Followed by a sample request:
 
 ```sh
 localstack@macintosh serverless-data-processing-pipeline % timestamp=$(awk 'BEGIN {srand(); print srand()}')
-localstack@macintosh serverless-data-processing-pipeline % curl -XPOST -H "Content-Type: application/json" $API_ENDPOINT -d "$(jq -n --arg ts "$timestamp" '{id: "1", message: "Hello World", timestamp: $ts | tonumber}')" -i
+localstack@macintosh serverless-data-processing-pipeline % curl -XPOST -H "Content-Type: application/json" $APIGW_ENDPOINT -d "$(jq -n --arg ts "$timestamp" '{id: "1", message: "Hello World", timestamp: $ts | tonumber}')" -i
 HTTP/2 200 
 content-type: application/json
 content-length: 21
@@ -108,7 +112,7 @@ server: hypercorn-h2
 ## Stress Test
 
 ```sh
-$ k6 run -e API_ENDPOINT=$API_ENDPOINT loadtest.js
+$ k6 run -e APIGW_ENDPOINT=$APIGW_ENDPOINT loadtest.js
 
 
           /\      |‾‾| /‾‾/   /‾‾/   
