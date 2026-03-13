@@ -6,9 +6,11 @@ This is a sample CDK app that creates a *API Gateway -> Lambda -> Kinesis Stream
 
 The following dependencies need to be available on your machine:
 
+1. A valid [LocalStack for AWS license](https://localstack.cloud/pricing). Your license provides a [`LOCALSTACK_AUTH_TOKEN`](https://docs.localstack.cloud/getting-started/auth-token/) to activate LocalStack.
+
 1. [Go](https://go.dev/doc/install).
 
-1. [Localstack CLI](https://docs.localstack.cloud/getting-started/installation/).
+1. [`localstack` CLI](https://docs.localstack.cloud/getting-started/installation/).
 
 1. [CDK CLI](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html).
 
@@ -41,10 +43,12 @@ The following dependencies need to be available on your machine:
 On LocalStack:
 
 ```bash
+export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
+make start
+make ready
+
 export PROVIDER_OVERRIDE_CLOUDWATCH=v1
 export LAMBDA_EVENT_SOURCE_MAPPING=v2
-localstack start -d
-
 export USE_LOCALSTACK=true
 export HOT_DEPLOY=true
 cdklocal bootstrap
