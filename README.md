@@ -6,11 +6,11 @@ This is a sample CDK app that creates a *API Gateway -> Lambda -> Kinesis Stream
 
 The following dependencies need to be available on your machine:
 
-1. A valid [LocalStack for AWS license](https://localstack.cloud/pricing). Your license provides a [`LOCALSTACK_AUTH_TOKEN`](https://docs.localstack.cloud/getting-started/auth-token/) to activate LocalStack.
+1. A valid [LocalStack for AWS license](https://localstack.cloud/pricing). Your license provides a [`LOCALSTACK_AUTH_TOKEN`](https://docs.localstack.cloud/aws/getting-started/auth-token/) to activate LocalStack.
 
 1. [Go](https://go.dev/doc/install).
 
-1. [`localstack` CLI](https://docs.localstack.cloud/getting-started/installation/).
+1. [`lstk` CLI](https://docs.localstack.cloud/aws/developer-tools/running-localstack/lstk/).
 
 1. [CDK CLI](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html).
 
@@ -22,7 +22,7 @@ The following dependencies need to be available on your machine:
 
 ## Commands
 
- * `localstack start` start LocalStack with the Docker executor
+ * `lstk start` start LocalStack with the Docker executor
  * `cdk bootstrap`                                    bootstrap cdk stack onto AWS/LocalStack
  * `cdk deploy`                                       deploy this stack to your default AWS account/region
  * `cdk diff`                                         compare deployed stack with current state
@@ -45,14 +45,13 @@ On LocalStack:
 ```bash
 export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
 make start
-make ready
 
 export PROVIDER_OVERRIDE_CLOUDWATCH=v1
 export LAMBDA_EVENT_SOURCE_MAPPING=v2
 export USE_LOCALSTACK=true
 export HOT_DEPLOY=true
-cdklocal bootstrap
-cdklocal deploy --require-approval=never
+lstk cdk bootstrap
+lstk cdk deploy --require-approval=never
 ```
 
 On AWS:
@@ -66,7 +65,7 @@ cdk deploy --require-approval=never --profile aws
 After deploying the stack, retrieve the method's endpoint by inspecting the CfnOutput outputs like in the following example:
 
 ```sh
-localstack@macintosh serverless-data-processing-pipeline % USE_LOCALSTACK=true HOT_DEPLOY=true cdklocal deploy --require-approval=never                                                   
+localstack@macintosh serverless-data-processing-pipeline % USE_LOCALSTACK=true HOT_DEPLOY=true lstk cdk deploy --require-approval=never                                                   
 
 ✨  Synthesis time: 3.72s
 
