@@ -20,14 +20,15 @@ output_file=$1
 
 echo "Monitoring CloudWatch metrics for new datapoints..."
 
-# Check if localstack-main container is running
-if [ -z "$(docker ps -q -f name=localstack-main)" ]; then
+# Find the LocalStack container: localstack-aws when started with lstk, localstack-main otherwise
+container=$(docker ps --format '{{.Names}}' | grep -m1 -E '^localstack-(aws|main)$' || true)
+if [ -z "$container" ]; then
     echo "Error: LocalStack container is not running."
     exit 1
 fi
 
 # Get the start time of the localstack container
-start_time=$(docker inspect -f '{{.State.StartedAt}}' localstack-main | sed 's/\.[0-9]*Z//' | xargs -I{} date -u -j -f '%Y-%m-%dT%H:%M:%S' {} +'%Y-%m-%dT%H:%M:%S')
+start_time=$(docker inspect -f '{{.State.StartedAt}}' "$container" | sed 's/\.[0-9]*Z//' | xargs -I{} date -u -j -f '%Y-%m-%dT%H:%M:%S' {} +'%Y-%m-%dT%H:%M:%S')
 end_time=$(date -u +'%Y-%m-%dT%H:%M:%S')
 
 # Initial run to get the current number of datapoints

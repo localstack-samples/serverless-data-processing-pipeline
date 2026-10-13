@@ -22,7 +22,10 @@ The following dependencies need to be available on your machine:
 
 ## Commands
 
- * `lstk start` start LocalStack with the Docker executor
+ * `make start`                                       start LocalStack with `lstk`
+ * `make build`                                       build the Lambda binaries for hot reloading
+ * `make deploy`                                      deploy the stack to LocalStack
+ * `make test`                                        send a request through the pipeline and check every stage
  * `cdk bootstrap`                                    bootstrap cdk stack onto AWS/LocalStack
  * `cdk deploy`                                       deploy this stack to your default AWS account/region
  * `cdk diff`                                         compare deployed stack with current state
@@ -44,15 +47,21 @@ On LocalStack:
 
 ```bash
 export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
+make install
 make start
-
-export PROVIDER_OVERRIDE_CLOUDWATCH=v1
-export LAMBDA_EVENT_SOURCE_MAPPING=v2
-export USE_LOCALSTACK=true
-export HOT_DEPLOY=true
-lstk cdk bootstrap
-lstk cdk deploy --require-approval=never
+make build
+make deploy
 ```
+
+`make build` compiles the three Lambda functions into `lambda/dist`, and `make deploy` runs `lstk cdk bootstrap` and `lstk cdk deploy` with `USE_LOCALSTACK=true` and `HOT_DEPLOY=true`. The functions are mounted from `lambda/dist` through hot reloading, so run `./watchman <upstream|midstream|downstream>` to rebuild a function whenever its source changes.
+
+To check the deployment, run:
+
+```bash
+make test
+```
+
+It sends one item through the API and checks that it reaches DynamoDB, that the downstream Lambda receives it from the DynamoDB stream, and that a latency datapoint lands in CloudWatch. It also checks that an item without a message is rejected with HTTP 400.
 
 On AWS:
 ```

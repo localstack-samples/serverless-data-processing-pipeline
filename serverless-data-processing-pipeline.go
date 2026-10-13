@@ -93,6 +93,8 @@ func NewServerlessDataProcessingPipelineStack(scope constructs.Construct, id str
 			"GOCACHE": jsii.String("/tmp/go-cache"),
 			"GOOS":    jsii.String("linux"),
 			"GOARCH":  jsii.String("amd64"),
+			// Static binary, the provided.al2 runtime ships an older glibc than the build image
+			"CGO_ENABLED": jsii.String("0"),
 		}
 		if props.HotDeploy {
 			lambdaCode = awslambda.Code_FromBucket(hotReloadBucket, jsii.String(filepath.Join(props.LambdasDistPath, k)), nil)
